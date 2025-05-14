@@ -1,0 +1,11 @@
+{
+  "name": "patricia-imoveis",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "cd project && npm run dev",
+    "build": "cd project && npm run build",
+    "preview": "cd project && npm run preview",
+    "vercel-build": "cd project && npm install && npm run build"
+  }
+}

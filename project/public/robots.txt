@@ -1,0 +1,9 @@
+# Permitir todos os robôs de busca
+User-agent: *
+Allow: /
+
+# Tempo de espera entre acessos consecutivos
+Crawl-delay: 10
+
+# Caminho para o sitemap
+Sitemap: https://www.patriciaimoveis.com.br/sitemap.xml 
