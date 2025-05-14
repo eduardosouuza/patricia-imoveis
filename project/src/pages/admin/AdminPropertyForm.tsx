@@ -36,20 +36,42 @@ export default function AdminPropertyForm() {
 
   const fetchProperty = async () => {
     try {
+      console.log('Buscando imóvel com ID:', id);
+      
       const { data, error } = await supabase
         .from('properties')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao buscar imóvel:', error);
+        throw error;
+      }
+      
       if (data) {
-        setProperty(data);
+        console.log('Imóvel encontrado:', data);
+        
+        // Garantir compatibilidade com diferentes formatos de dados
+        const formattedProperty = {
+          ...data,
+          // Garantir que os campos necessários existam
+          bedrooms: data.bedrooms || 0,
+          bathrooms: data.bathrooms || 0,
+          size: data.size || 0,
+          images: data.images || [],
+          property_type: data.property_type || data.type || '',
+          featured: Boolean(data.featured)
+        };
+        
+        setProperty(formattedProperty);
+        
         if (data.image) {
           setImagePreviews([data.image, ...(data.images || [])]);
         }
       }
     } catch (error) {
+      console.error('Erro completo ao carregar imóvel:', error);
       toast.error('Erro ao carregar imóvel');
       navigate('/admin');
     }
@@ -120,51 +142,94 @@ export default function AdminPropertyForm() {
       }
 
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
+      if (userError) {
+        console.error('Erro de autenticação:', userError);
+        throw userError;
+      }
+      
       if (!user) {
+        console.error('Usuário não autenticado');
         toast.error('Você precisa estar logado para realizar esta ação');
         return;
       }
+
+      console.log('Usuário autenticado:', user.id);
+      console.log('Modo:', id ? 'atualização' : 'criação');
 
       let uploadedUrls: string[] = [];
       if (imageFiles.length > 0) {
         uploadedUrls = await uploadImages(imageFiles);
       }
 
+      // Preparar os dados do imóvel
       const propertyData = {
         ...property,
         image: uploadedUrls[0] || property.image,
         images: uploadedUrls.slice(1),
         property_type: property.property_type || 'Não informado',
-        created_by: user.id,
+        size: property.size || 0,
+        updated_at: new Date().toISOString(),
         updated_by: user.id
       };
+
+      if (!id) {
+        propertyData.createdAt = new Date().toISOString();
+        propertyData.createdBy = user.id;
+      }
 
       console.log('Dados a serem salvos:', propertyData);
 
       if (id) {
+        // Atualização de imóvel existente
+        console.log('Atualizando imóvel com ID:', id);
+        
+        // Atualização direta sem usar RPC
         const { error } = await supabase
           .from('properties')
           .update({
-            ...propertyData,
+            title: propertyData.title,
+            description: propertyData.description,
+            price: propertyData.price,
+            location: propertyData.location,
+            address: propertyData.address,
+            bedrooms: propertyData.bedrooms,
+            bathrooms: propertyData.bathrooms,
+            size: propertyData.size,
+            property_type: propertyData.property_type,
+            status: propertyData.status,
+            featured: propertyData.featured,
+            updated_at: propertyData.updated_at,
             updated_by: user.id
           })
           .eq('id', id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao atualizar imóvel:', error);
+          throw error;
+        }
+        
+        console.log('Imóvel atualizado com sucesso');
         toast.success('Imóvel atualizado com sucesso');
       } else {
+        // Criação de novo imóvel
+        console.log('Criando novo imóvel');
+        
         const { error } = await supabase
           .from('properties')
           .insert([propertyData]);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao criar imóvel:', error);
+          throw error;
+        }
+        
+        console.log('Imóvel criado com sucesso');
         toast.success('Imóvel criado com sucesso');
       }
 
       navigate('/admin');
     } catch (error) {
-      console.error('Erro:', error);
+      console.error('Erro completo:', error);
       toast.error(id ? 'Erro ao atualizar imóvel' : 'Erro ao criar imóvel');
     } finally {
       setLoading(false);

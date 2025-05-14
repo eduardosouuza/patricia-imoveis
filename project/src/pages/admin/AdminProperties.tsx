@@ -23,6 +23,7 @@ export default function AdminProperties() {
       if (error) throw error;
       setProperties(data || []);
     } catch (error) {
+      console.error('Erro ao carregar imóveis:', error);
       toast.error('Erro ao carregar imóveis');
     } finally {
       setLoading(false);
@@ -33,16 +34,57 @@ export default function AdminProperties() {
     if (!window.confirm('Tem certeza que deseja excluir este imóvel?')) return;
 
     try {
+      console.log('Tentando excluir imóvel com ID:', id);
+      
+      // Verificar se o usuário está autenticado
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        console.error('Erro de autenticação:', authError);
+        throw authError;
+      }
+      
+      if (!user) {
+        console.error('Usuário não autenticado');
+        toast.error('Você precisa estar logado para excluir imóveis');
+        return;
+      }
+      
+      console.log('Usuário autenticado:', user.id);
+      
+      // Verificar se o imóvel existe antes de tentar excluir
+      const { data: propertyData, error: getError } = await supabase
+        .from('properties')
+        .select('id')
+        .eq('id', id)
+        .single();
+        
+      if (getError) {
+        console.error('Erro ao verificar imóvel:', getError);
+        throw getError;
+      }
+      
+      if (!propertyData) {
+        console.error('Imóvel não encontrado');
+        toast.error('Imóvel não encontrado');
+        return;
+      }
+      
+      // Executar a exclusão diretamente
       const { error } = await supabase
         .from('properties')
         .delete()
         .eq('id', id);
-
-      if (error) throw error;
+          
+      if (error) {
+        console.error('Erro ao excluir imóvel:', error);
+        throw error;
+      }
       
+      console.log('Imóvel excluído com sucesso');
       setProperties(properties.filter(property => property.id !== id));
       toast.success('Imóvel excluído com sucesso');
     } catch (error) {
+      console.error('Erro completo ao excluir imóvel:', error);
       toast.error('Erro ao excluir imóvel');
     }
   };
@@ -52,6 +94,28 @@ export default function AdminProperties() {
       style: 'currency',
       currency: 'BRL',
     });
+  };
+
+  // Renderizar botões de ação
+  const renderActionButtons = (property: Property) => {
+    return (
+      <div className="flex justify-end space-x-2">
+        <Link
+          to={`/admin/properties/${property.id}`}
+          className="p-2 text-primary/60 hover:text-accent bg-secondary rounded-lg transition-all duration-300 hover:shadow-sm"
+          title="Editar"
+        >
+          <Pencil size={18} />
+        </Link>
+        <button
+          onClick={() => handleDelete(property.id)}
+          className="p-2 text-primary/60 hover:text-red-600 bg-secondary rounded-lg transition-all duration-300 hover:shadow-sm"
+          title="Excluir"
+        >
+          <Trash2 size={18} />
+        </button>
+      </div>
+    );
   };
 
   if (loading) {
@@ -174,22 +238,7 @@ export default function AdminProperties() {
                     </span>
                   </td>
                   <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end space-x-2">
-                      <Link
-                        to={`/admin/properties/${property.id}`}
-                        className="p-2 text-primary/60 hover:text-accent bg-secondary rounded-lg transition-all duration-300 hover:shadow-sm"
-                        title="Editar"
-                      >
-                        <Pencil size={18} />
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(property.id)}
-                        className="p-2 text-primary/60 hover:text-red-600 bg-secondary rounded-lg transition-all duration-300 hover:shadow-sm"
-                        title="Excluir"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
+                    {renderActionButtons(property)}
                   </td>
                 </tr>
               ))}
