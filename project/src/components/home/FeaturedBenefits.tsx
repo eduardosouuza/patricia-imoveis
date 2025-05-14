@@ -23,7 +23,7 @@ const FeaturedBenefits = () => {
     },
     {
       title: 'Resposta Rápida',
-      description: 'Atendimento ágil e eficiente para todas as suas dúvidas, com canais diretos de comunicação 24/7',
+      description: 'Atendimento ágil e eficiente para todas as suas dúvidas.',
       icon: <Clock className="text-accent w-6 h-6" />,
       delay: 0.3,
     },
