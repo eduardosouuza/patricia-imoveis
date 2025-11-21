@@ -164,17 +164,21 @@ export default function AdminPropertyForm() {
       // Preparar os dados do imóvel
       const propertyData = {
         ...property,
-        image: uploadedUrls[0] || property.image,
-        images: uploadedUrls.slice(1),
+        image: uploadedUrls.length > 0 ? uploadedUrls[0] : property.image,
+        images: uploadedUrls.length > 0 ? uploadedUrls.slice(1) : (property.images || []),
         property_type: property.property_type || 'Não informado',
         size: property.size || 0,
         updated_at: new Date().toISOString(),
         updated_by: user.id
       };
 
+      let insertData: typeof propertyData | null = null;
       if (!id) {
-        propertyData.createdAt = new Date().toISOString();
-        propertyData.createdBy = user.id;
+        insertData = {
+          ...propertyData,
+          created_at: new Date().toISOString(),
+          created_by: user.id
+        } as typeof propertyData & { created_at: string; created_by: string };
       }
 
       console.log('Dados a serem salvos:', propertyData);
@@ -195,6 +199,8 @@ export default function AdminPropertyForm() {
             bedrooms: propertyData.bedrooms,
             bathrooms: propertyData.bathrooms,
             size: propertyData.size,
+            image: propertyData.image,
+            images: propertyData.images,
             property_type: propertyData.property_type,
             status: propertyData.status,
             featured: propertyData.featured,
@@ -216,7 +222,8 @@ export default function AdminPropertyForm() {
         
         const { error } = await supabase
           .from('properties')
-          .insert([propertyData]);
+          .insert([insertData || propertyData])
+          .select('*');
 
         if (error) {
           console.error('Erro ao criar imóvel:', error);
